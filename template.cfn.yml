@@ -17,6 +17,13 @@ Parameters:
   LatestAmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+  DbUserName:
+    Type: String
+    Description: Input database username.
+  DbUserPassword:
+    NoEcho: true
+    Type: String
+    Description: Input database password.
 ################################
 # Mappings
 ################################
@@ -63,6 +70,30 @@ Resources:
       Tags:
         - Key: Name
           Value: cfn-vpc-public-1c
+  cfnPrivateSubnet1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref cfnVPC
+      CidrBlock: 10.0.21.0/24
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select 
+        - 0
+        - Fn::GetAZs: !Ref AWS::Region
+      Tags:
+        - Key: Name
+          Value: cfn-vpc-private-1a
+  cfnPrivateSubnet1c:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref cfnVPC
+      CidrBlock: 10.0.22.0/24
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select 
+        - 1
+        - Fn::GetAZs: !Ref AWS::Region
+      Tags:
+        - Key: Name
+          Value: cfn-vpc-private-1c
 ################################
 # InternetGateway
 ################################
@@ -162,3 +193,76 @@ Resources:
       Tags:
         - Key: Name
           Value: cfn-web-sg
+################################
+# SecurityGroup for RDS
+################################
+  cfnDBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: cfn-db-sg
+      GroupDescription: Managed by CloudFormation
+      VpcId: !Ref cfnVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref cfnWebSecurityGroup
+      Tags:
+        - Key: Name
+          Value: cfn-db-sg
+################################
+# RDS
+################################
+  rdsDBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      # instance parameters
+      DBInstanceIdentifier: dbinstance
+      DBInstanceClass: db.t2.micro
+      MultiAZ: false
+      AvailabilityZone: !Select 
+        - 0
+        - Fn::GetAZs: !Ref AWS::Region
+      PubliclyAccessible: false
+      DBSubnetGroupName: !Ref rdsDBSubnetGroup
+      DBParameterGroupName: !Ref rdsDBParameterGroup
+      VPCSecurityGroups:
+        - !Ref cfnDBSecurityGroup
+      # storage parameters
+      StorageType: gp2
+      AllocatedStorage: 20
+      StorageEncrypted: false
+      # engine parameters
+      Engine: mysql
+      EngineVersion: 5.7.23
+      Port: 3306
+      DBName: MyDatabase
+      MasterUsername: !Ref DbUserName
+      MasterUserPassword: !Ref DbUserPassword
+      # backup and maintenance parameters
+      BackupRetentionPeriod: 2
+      PreferredBackupWindow: 19:00-20:00
+      PreferredMaintenanceWindow: sat:20:00-sat:21:00
+      AllowMajorVersionUpgrade: false
+      AutoMinorVersionUpgrade: true
+      Tags:
+        - Key: Name
+          Value: cfn-db
+  rdsDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Managed by CloudFormation
+      SubnetIds:
+        - !Ref cfnPrivateSubnet1a
+        - !Ref cfnPrivateSubnet1c
+      Tags:
+        - Key: Name
+          Value: cfn-db-subnet
+  rdsDBParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Description: Managed by CloudFormation
+      Family: mysql5.7
+      Tags:
+        - Key: Name
+          Value: db-pg

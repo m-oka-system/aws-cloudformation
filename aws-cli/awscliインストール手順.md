@@ -111,3 +111,16 @@ aws cloudformation deploy \
   --stack-name stack_name \
   --template-file template_name.yml
 ```
+
+# JSONパラメータのサンプル
+
+```json
+{
+  "StackName": "StackName",
+  "Parameters": [
+    { "ParameterKey": "KeyPair", "ParameterValue": "KeyPairName" },
+    { "ParameterKey": "DbUserName", "ParameterValue": "UserName" },
+    { "ParameterKey": "DbUserPassword", "ParameterValue": "Password" }
+  ]
+}
+```
