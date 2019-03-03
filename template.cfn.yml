@@ -266,3 +266,50 @@ Resources:
       Tags:
         - Key: Name
           Value: db-pg
+################################
+# ALB
+################################
+  cfnInternetALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: web-alb
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref cfnWebSecurityGroup
+      Subnets:
+        - !Ref cfnPublicSubnet1a
+        - !Ref cfnPublicSubnet1c
+      Tags:
+        - Key: Name
+          Value: web-alb
+  cfnTargetGroup: 
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties: 
+      Name: web-alb-tg
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref cfnVPC
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      HealthCheckTimeoutSeconds: 5
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: "/"
+      HealthCheckPort: "traffic-port"
+      HealthCheckIntervalSeconds: 10
+      Matcher: 
+        HttpCode: 200
+      Tags: 
+        - Key: Name
+          Value: web-alb-tg
+      Targets: 
+        - Id: !Ref cfnWeb1
+          Port: 80
+  cfnALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref cfnInternetALB 
+      DefaultActions:
+        - TargetGroupArn: !Ref cfnTargetGroup
+          Type: forward
+      Port: 80
+      Protocol: HTTP
