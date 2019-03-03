@@ -1,0 +1,218 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "asgudemyaws14daysasg": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "AvailabilityZones": [
+          "ap-northeast-1a",
+          "ap-northeast-1c"
+        ],
+        "Cooldown": "300",
+        "DesiredCapacity": "2",
+        "HealthCheckGracePeriod": "300",
+        "HealthCheckType": "ELB",
+        "MaxSize": "4",
+        "MinSize": "2",
+        "VPCZoneIdentifier": [
+          "subnet-0e8ad1d29848305a1",
+          "subnet-0ca51324dc3248968"
+        ],
+        "LaunchConfigurationName": {
+          "Ref": "lcudemyaws14dayslc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "web-from-AS",
+            "PropagateAtLaunch": true
+          }
+        ],
+        "TerminationPolicies": [
+          "Default"
+        ]
+      }
+    },
+    "lcudemyaws14dayslc": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "ImageId": "ami-00a5245b4816c38e6",
+        "InstanceType": "t2.micro",
+        "KeyName": "my-key-pair",
+        "SecurityGroups": [
+          {
+            "Ref": "sgsshhttpfullopen"
+          }
+        ],
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/xvda",
+            "Ebs": {
+              "SnapshotId": "snap-07b97ec0873da5773",
+              "VolumeSize": 8
+            }
+          }
+        ]
+      }
+    },
+    "instancei067ea024a9fb6fd18": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "DisableApiTermination": "false",
+        "InstanceInitiatedShutdownBehavior": "stop",
+        "ImageId": "ami-7f4db91e",
+        "InstanceType": "t2.small",
+        "Monitoring": "false"
+      }
+    },
+    "instancei0c5da4cdc582399e3": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "DisableApiTermination": "false",
+        "InstanceInitiatedShutdownBehavior": "stop",
+        "ImageId": "ami-00a5245b4816c38e6",
+        "InstanceType": "t2.micro",
+        "KeyName": "my-key-pair",
+        "Monitoring": "false",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "web-1"
+          }
+        ],
+        "NetworkInterfaces": [
+          {
+            "DeleteOnTermination": "true",
+            "DeviceIndex": 0,
+            "SubnetId": "subnet-0ca51324dc3248968",
+            "PrivateIpAddresses": [
+              {
+                "PrivateIpAddress": "10.0.11.199",
+                "Primary": "true"
+              }
+            ],
+            "GroupSet": [
+              {
+                "Ref": "sgsshhttpfullopen"
+              }
+            ],
+            "AssociatePublicIpAddress": "true"
+          }
+        ]
+      }
+    },
+    "instancei0c17d993743ad1474": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "DisableApiTermination": "false",
+        "InstanceInitiatedShutdownBehavior": "stop",
+        "ImageId": "ami-00a5245b4816c38e6",
+        "InstanceType": "t2.micro",
+        "KeyName": "my-key-pair",
+        "Monitoring": "false",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "web-2"
+          }
+        ],
+        "NetworkInterfaces": [
+          {
+            "DeleteOnTermination": "true",
+            "DeviceIndex": 0,
+            "SubnetId": "subnet-0e8ad1d29848305a1",
+            "PrivateIpAddresses": [
+              {
+                "PrivateIpAddress": "10.0.12.13",
+                "Primary": "true"
+              }
+            ],
+            "GroupSet": [
+              {
+                "Ref": "sgsshhttpfullopen"
+              }
+            ],
+            "AssociatePublicIpAddress": "true"
+          }
+        ]
+      }
+    },
+    "sgsshhttpfullopen": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Managed by Terraform",
+        "VpcId": "vpc-05fa26e2d8c69c9a8",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "web-sg"
+          }
+        ]
+      }
+    },
+    "scalingIncreaseGroupSize": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "AdjustmentType": "ChangeInCapacity",
+        "PolicyType": "SimpleScaling",
+        "ScalingAdjustment": 2,
+        "AutoScalingGroupName": {
+          "Ref": "asgudemyaws14daysasg"
+        }
+      }
+    },
+    "scalingDecreaseGroupSize": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "AdjustmentType": "ChangeInCapacity",
+        "PolicyType": "StepScaling",
+        "StepAdjustments": [
+          {
+            "ScalingAdjustment": -2,
+            "MetricIntervalUpperBound": 0.0
+          }
+        ],
+        "AutoScalingGroupName": {
+          "Ref": "asgudemyaws14daysasg"
+        }
+      }
+    },
+    "ingress1": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgsshhttpfullopen"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "80",
+        "ToPort": "80",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "ingress2": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgsshhttpfullopen"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "22",
+        "ToPort": "22",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "egress1": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgsshhttpfullopen"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "0",
+        "ToPort": "65535",
+        "CidrIp": "0.0.0.0/0"
+      }
+    }
+  },
+  "Description": ""
+}

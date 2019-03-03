@@ -1,0 +1,223 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ---
+Metadata: 
+
+Parameters: 
+
+Mappings: 
+
+Conditions: 
+
+Resources:
+################################
+# VPC
+################################
+  myVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: --.--.--.--/--
+      EnableDnsSupport: true
+      Tags:
+        - Key: keyname
+          Value: value
+################################
+# Subnet
+################################
+  subnetName:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: zone-id
+      VpcId:
+      CidrBlock: --.--.--.--/--
+      Tags:
+        - Key: keyname
+          Value: value
+################################
+# InternetGateway
+################################
+  igwName:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: keyname
+          Value: value
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: AttachGateway
+      InternetGatewayId: !Ref igwName
+################################
+# PublicRoute
+################################
+  routeTableName:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: vpc-id
+      Tags:
+        - Key: keyname
+          Value: value
+  routeName:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: rtable-id
+      DestinationCidrBlock: --.--.--.--/--
+      GatewayId: gataway-id
+  routeTableAssocName:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: subnet-id
+      RouteTableId: rtable-id
+################################
+# EC2Instance
+################################
+  myEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: 
+      DisableApiTermination: 
+      ImageId: 
+      InstanceType: 
+      Monitoring: true|false
+      SecurityGroupIds:
+        - sg-id
+      UserData: !Base64 |
+        #!/bin/bash -ex
+        # put your script here
+      Tags:
+        - Key: key
+          Value: value
+################################
+# SecurityGroup for EC2
+################################
+  secGroupName:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: 
+      GroupDescription: 
+      VpcId:
+      SecurityGroupIngress:
+        - IpProtocol: [tcp|udp|ip]
+          FromPort: 
+          ToPort: 
+          CidrIp: --.--.--.--/--
+      SecurityGroupEgress:
+        - IpProtocol: [tcp|udp|ip]
+          FromPort: 
+          ToPort: 
+          CidrIp: --.--.--.--/--
+      Tags:
+        - Key:
+          Value:
+################################
+# SecurityGroup for RDS
+################################
+  secGroupName:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: 
+      GroupDescription: 
+      VpcId:
+      SecurityGroupIngress:
+        - IpProtocol: [tcp|udp|ip]
+          FromPort: 
+          ToPort: 
+          CidrIp: --.--.--.--/--
+      Tags:
+        - Key:
+          Value:
+################################
+# RDS
+################################
+  rdsDBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: 
+      DBInstanceClass: 
+      AllowMajorVersionUpgrade: true|false
+      AutoMinorVersionUpgrade: true|false
+      AvailabilityZone: 
+      BackupRetentionPeriod: 
+      CharacterSetName: 
+      DBInstanceIdentifier: 
+      DBName: 
+      DBParameterGroupName: 
+      DBSecurityGroups: 
+        - db-sg-group
+      DBSnapshotIdentifier: 
+      DBSubnetGroupName: 
+      Engine: mysql|oracle
+      EngineVersion: 
+      Iops: 
+      KmsKeyId: 
+      LicenseModel: 
+      MasterUsername: 
+      MasterUserPassword: 
+      MultiAZ: true|false
+      OptionGroupName: 
+      Port: 
+      PreferredBackupWindow: 
+      PreferredMaintenanceWindow: 
+      PubliclyAccessible: true|false
+      SourceDBInstanceIdentifier: 
+      StorageEncrypted: true|false
+      StorageType: 
+      VPCSecurityGroups:
+        - vpc-sg-id
+      Tags:
+        - Key: keyname
+          Value: value
+  rdsDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: 
+      SubnetIds:
+        - subnet-id
+    Tags:
+      - Key: keyname
+        Value: value
+  rdsDBParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Description: 
+      Family: 
+      Parameters:
+        key1: value1
+        key2: value2
+      Tags:
+        - Key: keyname
+          Value: value
+################################
+# ALB
+################################
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: 
+      Port: 
+      Protocol: 
+      DefaultActions:
+        - Type: 
+          TargetGroupArn: 
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: 
+      Port: 
+      Protocol: 
+      VpcId:
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      HealthCheckTimeoutSeconds: 5     
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /
+      HealthCheckPort: traffic-port
+      HealthCheckIntervalSeconds: 10
+      Matcher:
+        HttpCode: 200
+      Tags:
+        - Key: 
+          Value: 
+      Targets:
+        - Id: 
+          Port: 0
+Outputs:

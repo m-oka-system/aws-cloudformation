@@ -1,0 +1,164 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cloudformation template.
+################################
+# Parameters
+################################
+Parameters: 
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - t2.medium
+  KeyPair:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Select keypair name.
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+################################
+# Mappings
+################################
+# Mappings: 
+
+Resources:
+################################
+# VPC
+################################
+  cfnVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: cfn-vpc
+################################
+# Subnet
+################################
+  cfnPublicSubnet1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref cfnVPC
+      CidrBlock: 10.0.11.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select 
+        - 0
+        - Fn::GetAZs: !Ref AWS::Region
+      Tags:
+        - Key: Name
+          Value: cfn-vpc-public-1a
+  cfnPublicSubnet1c:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref cfnVPC
+      CidrBlock: 10.0.12.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select 
+        - 1
+        - Fn::GetAZs: !Ref AWS::Region
+      Tags:
+        - Key: Name
+          Value: cfn-vpc-public-1c
+################################
+# InternetGateway
+################################
+  cfnInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: cfn-vpc-igw
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref cfnVPC
+      InternetGatewayId: !Ref cfnInternetGateway
+################################
+# PublicRoute
+################################
+  cfnPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref cfnVPC
+      Tags:
+        - Key: Name
+          Value: cfn-vpc-public-rt
+  cfnPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: cfnInternetGateway
+    Properties:
+      RouteTableId: !Ref cfnPublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref cfnInternetGateway
+  cfnPublicRouteTableAssociation1a:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref cfnPublicSubnet1a
+      RouteTableId: !Ref cfnPublicRouteTable
+  cfnPublicRouteTableAssociation1c:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref cfnPublicSubnet1c
+      RouteTableId: !Ref cfnPublicRouteTable
+################################
+# EC2Instance
+################################
+  cfnWeb1:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref cfnPublicSubnet1a
+      Monitoring: false
+      DisableApiTermination: false
+      BlockDeviceMappings: 
+          - DeviceName: "/dev/xvda"
+            Ebs: 
+              VolumeType: gp2
+              VolumeSize: 20
+      SecurityGroupIds:
+        - !Ref cfnWebSecurityGroup
+      KeyName: !Ref KeyPair
+      UserData: !Base64 |
+        #!/bin/bash -ex
+        yum -y update
+      Tags:
+        - Key: Name
+          Value: cfn-web1
+################################
+# EIP for EC2
+################################
+  cfnEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref cfnWeb1
+################################
+# SecurityGroup for EC2
+################################
+  cfnWebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: cfn-web-sg
+      GroupDescription: Managed by CloudFormation
+      VpcId: !Ref cfnVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: cfn-web-sg
