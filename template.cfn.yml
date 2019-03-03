@@ -160,6 +160,28 @@ Resources:
       Tags:
         - Key: Name
           Value: cfn-web1
+  cfnWeb2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref cfnPublicSubnet1c
+      Monitoring: false
+      DisableApiTermination: false
+      BlockDeviceMappings: 
+          - DeviceName: "/dev/xvda"
+            Ebs: 
+              VolumeType: gp2
+              VolumeSize: 20
+      SecurityGroupIds:
+        - !Ref cfnWebSecurityGroup
+      KeyName: !Ref KeyPair
+      UserData: !Base64 |
+        #!/bin/bash -ex
+        yum -y update
+      Tags:
+        - Key: Name
+          Value: cfn-web2
 ################################
 # EIP for EC2
 ################################
@@ -303,6 +325,8 @@ Resources:
           Value: web-alb-tg
       Targets: 
         - Id: !Ref cfnWeb1
+          Port: 80
+        - Id: !Ref cfnWeb2
           Port: 80
   cfnALBListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
