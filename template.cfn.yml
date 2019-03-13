@@ -146,6 +146,7 @@ Resources:
       SubnetId: !Ref cfnPublicSubnet1a
       Monitoring: false
       DisableApiTermination: false
+      PrivateIpAddress: 10.0.11.4
       BlockDeviceMappings: 
           - DeviceName: "/dev/xvda"
             Ebs: 
@@ -168,6 +169,7 @@ Resources:
       SubnetId: !Ref cfnPublicSubnet1c
       Monitoring: false
       DisableApiTermination: false
+      PrivateIpAddress: 10.0.12.4
       BlockDeviceMappings: 
           - DeviceName: "/dev/xvda"
             Ebs: 
