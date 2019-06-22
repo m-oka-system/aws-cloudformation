@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cloudformation template.
+################################
+# Parameters
+################################
+Parameters: 
+  KeyPair:
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: my-key-pair
+    Description: Select keypair name.
+################################
+# Mappings
+################################
+Mappings: 
+  prd:
+    PublicSubnet1a: { ID: subnet-015b4f44a1ee97ab2}
+    w-iaas-vm:
+      InstanceType: t2.micro
+      AmiId: ami-00a2124836f967293
+      SecurityGroupId: sg-0589607ccda50fd80
+      NetworkInterfaceId: eni-081f39e9d2013f42a
+      NetworkInterfaceMgrId: eni-0f9e37c3dee56da2c
+      IAMRoleArn: w-iaas-vm-role
+
+Resources:
+################################
+# EC2Instance
+################################
+  VM01:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !FindInMap [ prd, w-iaas-vm, AmiId ]
+      InstanceType: !FindInMap [ prd, w-iaas-vm, InstanceType ]
+      Monitoring: false
+      DisableApiTermination: false
+      # BlockDeviceMappings: 
+      #     - DeviceName: "/dev/sda1"
+      #       Ebs: 
+      #         VolumeType: gp2
+      #         VolumeSize: 30
+      NetworkInterfaces:
+        - DeleteOnTermination: false
+          DeviceIndex: 0
+          NetworkInterfaceId: !FindInMap [ prd, w-iaas-vm, NetworkInterfaceId ]
+      KeyName: !Ref KeyPair
+      IamInstanceProfile: !Ref IAMInstanceProfile
+      Tags:
+        - Key: Name
+          Value: w-iaas-vm
+################################
+# NetworkInterface
+################################
+  NetworkInterfaceAttachment:
+    Type: AWS::EC2::NetworkInterfaceAttachment
+    Properties:
+      DeviceIndex: 1
+      InstanceId: !Ref VM01
+      NetworkInterfaceId: !FindInMap [ prd, w-iaas-vm, NetworkInterfaceMgrId ]
+################################
+# EBS
+################################
+  # EC2Volume:
+  #   Type: AWS::EC2::Volume
+  #   Properties:
+  #     AvailabilityZone: ap-northeast-1a
+  #     SnapshotId: snap-0fb17b3a864d72e02
+  #     VolumeType: gp2
+  #     Tags:
+  #       - Key: Name
+  #         Value: w-iaas-vm-C
+  # EC2VolumeAttachment:
+  #   Type: AWS::EC2::VolumeAttachment
+  #   Properties:
+  #     Device: /dev/sda1
+  #     InstanceId: !Ref VM01
+  #     VolumeId: !Ref EC2Volume
+################################
+# IAM
+################################
+  IAMInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles: 
+        - !FindInMap [ prd, w-iaas-vm, IAMRoleArn ]
