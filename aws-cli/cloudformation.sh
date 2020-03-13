@@ -1,5 +1,10 @@
 #!/bin/sh
-aws cloudformation validate-template --template-body file://template.cfn.yml
-aws cloudformation deploy --stack-name cfnStack --template-file template.cfn.yml 
-aws cloudformation create-stack --template-body file://template.cfn.yml --cli-input-json file://aws-cli/parameter.json
-aws cloudformation delete-stack --stack-name cfnStack
+
+stackName=TEST-STACK
+templateName=vpc.yml
+paramFile=parameter.json
+
+aws cloudformation validate-template --template-body file://$templateName
+aws cloudformation deploy --stack-name $stackName --template-file $templateName 
+aws cloudformation create-stack --stack-name $stackName --template-body file://$templateName --cli-input-json file://$paramFile
+aws cloudformation delete-stack --stack-name $stackName

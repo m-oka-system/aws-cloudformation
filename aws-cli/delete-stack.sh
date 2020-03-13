@@ -1,3 +1,6 @@
 #!/bin/sh
+
+stackName=$1
+
 aws cloudformation delete-stack \
-  --stack-name stack_name
+  --stack-name $stackName

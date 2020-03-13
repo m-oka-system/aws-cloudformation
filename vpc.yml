@@ -1,0 +1,155 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cloudformation template for VPC.
+
+################################
+# Mappings
+################################
+Mappings: 
+  TagsMap:
+    EnvName:
+      Env: "Dev"
+
+Resources:
+################################
+# VPC
+################################
+  cfnVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: cfnVPC
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+################################
+# Subnet
+################################
+  cfnPublicSubnet1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref cfnVPC
+      CidrBlock: 10.0.11.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select 
+        - 0
+        - Fn::GetAZs: !Ref AWS::Region
+      Tags:
+        - Key: Name
+          Value: cfn-vpc-public-1a
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+  cfnPublicSubnet1c:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref cfnVPC
+      CidrBlock: 10.0.12.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select 
+        - 1
+        - Fn::GetAZs: !Ref AWS::Region
+      Tags:
+        - Key: Name
+          Value: cfn-vpc-public-1c
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+  cfnPrivateSubnet1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref cfnVPC
+      CidrBlock: 10.0.21.0/24
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select 
+        - 0
+        - Fn::GetAZs: !Ref AWS::Region
+      Tags:
+        - Key: Name
+          Value: cfn-vpc-private-1a
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+  cfnPrivateSubnet1c:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref cfnVPC
+      CidrBlock: 10.0.22.0/24
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select 
+        - 1
+        - Fn::GetAZs: !Ref AWS::Region
+      Tags:
+        - Key: Name
+          Value: cfn-vpc-private-1c
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+################################
+# InternetGateway
+################################
+  cfnInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: cfn-vpc-igw
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref cfnVPC
+      InternetGatewayId: !Ref cfnInternetGateway
+################################
+# PublicRoute
+################################
+  cfnPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref cfnVPC
+      Tags:
+        - Key: Name
+          Value: cfn-vpc-public-rt
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+  cfnPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: cfnInternetGateway
+    Properties:
+      RouteTableId: !Ref cfnPublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref cfnInternetGateway
+  cfnPublicRouteTableAssociation1a:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref cfnPublicSubnet1a
+      RouteTableId: !Ref cfnPublicRouteTable
+  cfnPublicRouteTableAssociation1c:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref cfnPublicSubnet1c
+      RouteTableId: !Ref cfnPublicRouteTable
+################################
+# Outputs
+################################
+Outputs:
+  cfnVPC:
+    Value: !Ref cfnVPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPCID"
+  cfnPublicSubnet1a:
+    Value: !Ref cfnPublicSubnet1a
+    Export:
+      Name: !Sub "${AWS::StackName}-PUBLIC-SUBNETID-1a"
+  cfnPublicSubnet1c:
+    Value: !Ref cfnPublicSubnet1c
+    Export:
+      Name: !Sub "${AWS::StackName}-PUBLIC-SUBNETID-1c"
+  cfnPrivateSubnet1a:
+    Value: !Ref cfnPrivateSubnet1a
+    Export:
+      Name: !Sub "${AWS::StackName}-PRIVATE-SUBNETID-1a"
+  cfnPrivateSubnet1c:
+    Value: !Ref cfnPrivateSubnet1c
+    Export:
+      Name: !Sub "${AWS::StackName}-PRIVATE-SUBNETID-1c"

@@ -155,9 +155,11 @@ Resources:
       SecurityGroupIds:
         - !Ref cfnWebSecurityGroup
       KeyName: !Ref KeyPair
-      UserData: !Base64 |
-        #!/bin/bash -ex
-        yum -y update
+      UserData:
+        Fn::Base64: !Sub 
+          - |
+            #!/bin/bash
+            yum -y update
       Tags:
         - Key: Name
           Value: cfn-web1
