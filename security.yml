@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cloudformation template for Security.
+
+################################
+# Mappings
+################################
+Mappings: 
+  TagsMap:
+    EnvName:
+      Env: "Dev"
+
+Resources:
+################################
+# SecurityGroup for EC2
+################################
+  cfnWebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: cfn-web-sg
+      GroupDescription: Managed by CloudFormation
+      VpcId: !ImportValue VPC-STACK-VPCID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: cfn-web-sg
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+################################
+# SecurityGroup for RDS
+################################
+  cfnDBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: cfn-db-sg
+      GroupDescription: Managed by CloudFormation
+      VpcId: !ImportValue VPC-STACK-VPCID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref cfnWebSecurityGroup
+      Tags:
+        - Key: Name
+          Value: cfn-db-sg
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+################################
+# IAM
+################################
+  cfnIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: cfnIAMRole
+      AssumeRolePolicyDocument: 
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Tags:
+        - Key: Name
+          Value: cfnIAMRole
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+  cfnIAMPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: cfnIAMPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - ec2:*
+              - cloudformation:*
+            Resource: "*"
+      Roles:
+        - !Ref cfnIAMRole
+  cfnIAMInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: cfnIAMInstanceProfile
+      Path: /
+      Roles: 
+        - !Ref cfnIAMRole
+################################
+# Outputs
+################################
+Outputs:
+  cfnIAMInstanceProfile:
+    Value: !Ref cfnIAMInstanceProfile
+    Export:
+      Name: !Sub "${AWS::StackName}-IAMPROFILE"
+  cfnWebSecurityGroup:
+    Value: !Ref cfnWebSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-WEB-SGID"
+  cfnDBSecurityGroup:
+    Value: !Ref cfnDBSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-DB-SGID"

@@ -1,3 +1,6 @@
 #!/bin/sh
+
+templateName=$1
+
 aws cloudformation validate-template \
-  --template-body file://template_name.cfn.yml
+  --template-body file://$templateName

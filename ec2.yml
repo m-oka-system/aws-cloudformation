@@ -1,0 +1,132 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cloudformation template for EC2.
+
+################################
+# Parameters
+################################
+Parameters: 
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - t2.medium
+  KeyPair:
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: my-key-pair
+    Description: Select keypair name.
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+    # Type: String
+    # Default: ami-09f31cc5d5eecca1a
+################################
+# Mappings
+################################
+Mappings: 
+  TagsMap:
+    EnvName:
+      Env: "Dev"
+
+Resources:
+################################
+# EC2Instance
+################################
+  cfnWeb1:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref InstanceType
+      SubnetId: !ImportValue VPC-STACK-PUBLIC-SUBNETID-1a
+      Monitoring: false
+      DisableApiTermination: false
+      PrivateIpAddress: 10.0.11.4
+      BlockDeviceMappings: 
+          - DeviceName: "/dev/xvda"
+            Ebs: 
+              VolumeType: gp2
+              VolumeSize: 10
+      SecurityGroupIds:
+        - !ImportValue SECURITY-STACK-WEB-SGID
+      KeyName: !Ref KeyPair
+      IamInstanceProfile: !ImportValue SECURITY-STACK-IAMPROFILE
+      UserData:
+        Fn::Base64: !Sub
+          - #!/bin/bash
+            yum -y update
+            amazon-linux-extras install -y nginx1
+            systemctl start nginx && systemctl enable nginx
+            yum install -y unzip
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            sudo ./aws/install
+            AWS_AVAIL_ZONE=$(curl http://169.254.169.254/latest/meta-data/placement/availability-zone)
+            AWS_REGION="`echo \"$AWS_AVAIL_ZONE\" | sed 's/[a-z]$//'`"
+            AWS_INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+            ROOT_VOLUME_IDS=$(aws ec2 describe-instances --region $AWS_REGION --instance-id $AWS_INSTANCE_ID --output text --query Reservations[0].Instances[0].BlockDeviceMappings[0].Ebs.VolumeId)
+            aws ec2 create-tags --resources $ROOT_VOLUME_IDS --region $AWS_REGION --tags Key=Name,Value=cfnEBS Key=Env,Value=${Env}
+          - { Env: !FindInMap [ TagsMap, EnvName, Env ] }
+      Tags:
+        - Key: Name
+          Value: cfn-web1
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+  # cfnWeb2:
+  #   Type: AWS::EC2::Instance
+  #   Properties:
+  #     ImageId: !Ref LatestAmiId
+  #     InstanceType: !Ref InstanceType
+  #     SubnetId: !ImportValue VPC-STACK-PUBLIC-SUBNETID-1c
+  #     Monitoring: false
+  #     DisableApiTermination: false
+  #     PrivateIpAddress: 10.0.12.4
+  #     BlockDeviceMappings: 
+  #         - DeviceName: "/dev/xvda"
+  #           Ebs: 
+  #             VolumeType: gp2
+  #             VolumeSize: 10
+  #     SecurityGroupIds:
+  #       - !ImportValue SECURITY-STACK-WEB-SGID
+  #     KeyName: !Ref KeyPair
+  #     IamInstanceProfile: !ImportValue SECURITY-STACK-IAMPROFILE-ARN
+  #     UserData:
+  #       Fn::Base64: !Sub |
+  #         -
+  #           #!/bin/bash
+  #           yum -y update
+  #           yum install -y unzip && yum install -y nginx
+  #           systemctl start nginx && systemctl enable nginx
+  #           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+  #           unzip awscliv2.zip
+  #           sudo ./aws/install
+  #           AWS_AVAIL_ZONE=$(curl http://169.254.169.254/latest/meta-data/placement/availability-zone)
+  #           AWS_REGION="`echo \"$AWS_AVAIL_ZONE\" | sed 's/[a-z]$//'`"
+  #           AWS_INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+  #           ROOT_VOLUME_IDS=$(aws ec2 describe-instances --region $AWS_REGION --instance-id $AWS_INSTANCE_ID --output text --query Reservations[0].Instances[0].BlockDeviceMappings[0].Ebs.VolumeId)
+  #           aws ec2 create-tags --resources $ROOT_VOLUME_IDS --region $AWS_REGION --tags Key=Env,Value=${Env}
+  #         - { Env: !FindInMap [ TagsMap, EnvName, Env ] }
+  #     Tags:
+  #       - Key: Name
+  #         Value: cfn-web2
+  #       - Key: Env
+  #         Value: !FindInMap [ TagsMap, EnvName, Env ]
+################################
+# EIP for EC2
+################################
+  cfnEIP1:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref cfnWeb1
+  # cfnEIP2:
+  #   Type: AWS::EC2::EIP
+  #   Properties:
+  #     InstanceId: !Ref cfnWeb2
+################################
+# Outputs
+################################
+Outputs:
+  cfnEIP1:
+    Value: !Ref cfnEIP1
+  # cfnEIP2:
+  #   Value: !Ref cfnEIP2

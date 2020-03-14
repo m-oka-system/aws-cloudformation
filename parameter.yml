@@ -1,0 +1,21 @@
+################################
+# Parameters
+################################
+Parameters: 
+  UserName:
+    TYpe: String
+    Default: dbadmin
+    AllowdPattern: '[a-zA-z][a-zA-Z0-9]*'
+  UserPassword:
+    Type: String
+    MinLength: 8
+    MaxLength: 12
+    Description: Master user paassword for the db instance
+    ConstraintDescription: Parameter value must be between 8 and 12
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - t2.medium
