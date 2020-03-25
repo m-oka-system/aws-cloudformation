@@ -1,0 +1,181 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cloudformation template for VPC.
+
+################################
+# Mappings
+################################
+Mappings: 
+  TagsMap:
+    EnvName:
+      Env: "Dev"
+
+Resources:
+################################
+# VPC1
+################################
+  cfnVPC1:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: cfnVPC1
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+################################
+# VPC1 Subnet
+################################
+  cfnVpc1PublicSubnet1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref cfnVPC1
+      CidrBlock: 10.0.11.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select 
+        - 0
+        - Fn::GetAZs: !Ref AWS::Region
+      Tags:
+        - Key: Name
+          Value: cfn-vpc1-public-1a
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+################################
+# VPC2
+################################
+  cfnVPC2:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 192.168.0.0/24
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: cfnVPC2
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+################################
+# VPC2 Subnet
+################################
+  cfnVpc2PublicSubnet1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref cfnVPC2
+      CidrBlock: 192.168.0.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select 
+        - 0
+        - Fn::GetAZs: !Ref AWS::Region
+      Tags:
+        - Key: Name
+          Value: cfn-vpc2-public-1a
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+################################
+# InternetGateway
+################################
+  cfnInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: cfn-vpc-igw
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref cfnVPC1
+      InternetGatewayId: !Ref cfnInternetGateway
+################################
+# PublicRoute
+################################
+  cfnVpc1PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref cfnVPC1
+      Tags:
+        - Key: Name
+          Value: cfn-vpc1-public-rt
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+  cfnPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: cfnInternetGateway
+    Properties:
+      RouteTableId: !Ref cfnVpc1PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref cfnInternetGateway
+  cfnVpc1PeeringRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 192.168.0.0/24
+      RouteTableId:
+        Ref: cfnVpc1PublicRouteTable
+      VpcPeeringConnectionId:
+        Ref: cfnVPCPeeringConnection
+  cfnVpc1PublicRouteTableAssociation1a:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref cfnVpc1PublicSubnet1a
+      RouteTableId: !Ref cfnVpc1PublicRouteTable
+  cfnVpc2PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref cfnVPC2
+      Tags:
+        - Key: Name
+          Value: cfn-vpc2-public-rt
+        - Key: Env
+          Value: !FindInMap [ TagsMap, EnvName, Env ]
+  cfnVpc2PeeringRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 10.0.0.0/16
+      RouteTableId:
+        Ref: cfnVpc2PublicRouteTable
+      VpcPeeringConnectionId:
+        Ref: cfnVPCPeeringConnection
+  cfnVpc2PublicRouteTableAssociation1a:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref cfnVpc2PublicSubnet1a
+      RouteTableId: !Ref cfnVpc2PublicRouteTable
+################################
+# VPC Peering
+################################
+  cfnVPCPeeringConnection:
+    Type: AWS::EC2::VPCPeeringConnection
+    Properties:
+        VpcId:
+          Ref: cfnVPC1
+        PeerVpcId:
+          Ref: cfnVPC2
+        Tags:
+          - Key: Name
+            Value: cfn-vpc-peering
+          - Key: Env
+            Value: !FindInMap [ TagsMap, EnvName, Env ]
+################################
+# Outputs
+################################
+Outputs:
+  cfnVPC1:
+    Value: !Ref cfnVPC1
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC1"
+  cfnVpc1PublicSubnet1a:
+    Value: !Ref cfnVpc1PublicSubnet1a
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC1-PUBLICSUBNET-1a"
+  cfnVPC2:
+    Value: !Ref cfnVPC2
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC2"
+  cfnVpc2PublicSubnet1a:
+    Value: !Ref cfnVpc2PublicSubnet1a
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC2-PUBLICSUBNET-1a"
